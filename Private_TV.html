@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>🎬 Private TV Ultimate</title>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <style>
+        :root {
+            --bg-main: #0a0e17;
+            --bg-panel: #111827;
+            --bg-list: #1a1f2e;
+            --text-main: #ecf0f1;
+            --text-muted: #95a5a6;
+            --accent-green: #2ecc71;
+            --accent-blue: #3498db;
+            --accent-red: #e74c3c;
+            --accent-yellow: #f1c40f;
+            --header-bg: #1f2a38;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+
+        body { 
+            background-color: var(--bg-main); 
+            color: var(--text-main); 
+            height: 100vh; 
+            height: 100dvh; 
+            display: flex; 
+            flex-direction: column; 
+            overflow: hidden; 
+        }
+
+        header { 
+            background: var(--bg-panel); 
+            padding: 12px 15px; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            border-bottom: 2px solid var(--accent-red); 
+            flex-shrink: 0; 
+        }
+        header h1 { font-size: 1.1rem; }
+        header small { color: var(--text-muted); font-style: italic; font-size: 0.8rem; }
+
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            width: 100%;
+        }
+
+        /* Video Player */
+        .player-section { flex: none; height: 35vh; min-height: 220px; background: #000; display: flex; flex-direction: column; width: 100%; }
+        .video-container { flex: 1; display: flex; justify-content: center; align-items: center; position: relative; background: #000; }
+        video { width: 100%; height: 100%; object-fit: contain; }
+        
+        .player-controls { background: var(--bg-panel); padding: 8px 15px; display: flex; gap: 8px; align-items: center; flex-shrink: 0; border-bottom: 1px solid #333; }
+        .btn { padding: 8px 12px; border: none; border-radius: 4px; font-weight: bold; font-size: 0.85rem; cursor: pointer; color: white; transition: 0.2s; white-space: nowrap; }
+        .btn:active { transform: scale(0.95); }
+        
+        .btn-stop { background: var(--accent-red); flex-shrink: 0; }
+        .btn-refresh { background: var(--accent-blue); flex-shrink: 0; }
+        
+        .now-playing { margin-left: auto; color: var(--accent-green); font-weight: bold; font-size: 0.85rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 45%; text-align: right; }
+
+        /* List Section */
+        .list-section { width: 100%; flex: 1; display: flex; flex-direction: column; background: var(--bg-main); overflow: hidden; }
+        
+        .toolbar { 
+            padding: 10px 15px; 
+            background: var(--bg-panel); 
+            display: flex; 
+            gap: 8px; 
+            align-items: center; 
+            flex-shrink: 0; 
+        }
+        .toolbar input { 
+            flex: 1; 
+            padding: 10px; 
+            background: var(--bg-list); 
+            border: 1px solid #333; 
+            color: white; 
+            border-radius: 4px; 
+            font-size: 0.95rem; 
+        }
+
+        .channel-list { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding-bottom: 10px; }
+        
+        .category-header {
+            background: var(--header-bg);
+            color: var(--accent-red);
+            padding: 8px 15px;
+            font-weight: bold;
+            font-size: 0.95rem;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            border-bottom: 1px solid #0a0e17;
+            text-transform: uppercase;
+        }
+
+        .channel-item { 
+            padding: 15px; 
+            border-bottom: 1px solid #222; 
+            cursor: pointer; 
+            display: flex; 
+            justify-content: space-between;
+            align-items: center;
+        }
+        .channel-item.active { background: #2c1a1a; border-left: 4px solid var(--accent-red); }
+        
+        .channel-info { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+        .channel-title { font-size: 1.1rem; font-weight: bold; }
+        .status-badge { font-size: 0.7rem; background: var(--accent-red); color: white; padding: 2px 5px; border-radius: 4px; margin-left: 8px; }
+
+        @media (orientation: landscape) {
+            .main-content { flex-direction: row; }
+            .player-section { flex: 1.5; height: 100%; border-right: 1px solid #333; }
+            .list-section { flex: 1; height: 100%; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>🎬 Private TV Ultimate</h1>
+        <small>by ROCKY</small>
+    </header>
+
+    <div class="main-content">
+        <div class="player-section">
+            <div class="video-container">
+                <video id="videoPlayer" controls playsinline></video>
+            </div>
+            <div class="player-controls">
+                <button class="btn btn-stop" onclick="stopPlayer()">⏹ STOP</button>
+                <button class="btn btn-refresh" onclick="loadChannels()">🔄 Reload</button>
+                <div class="now-playing" id="nowPlayingText">Not playing</div>
+            </div>
+        </div>
+
+        <div class="list-section">
+            <div class="toolbar">
+                <input type="text" id="searchInput" placeholder="🔍 Search channels..." oninput="renderChannels()">
+            </div>
+            <div class="channel-list" id="channelList"></div>
+        </div>
+    </div>
+
+    <script>
+        const video = document.getElementById('videoPlayer');
+        const channelListEl = document.getElementById('channelList');
+        const searchInput = document.getElementById('searchInput');
+        const nowPlayingText = document.getElementById('nowPlayingText');
+        
+        let hls = null;
+        let currentPlayingUrl = null;
+
+        // Your specific channel list
+        const myChannels = [
+            {
+                name: "Babes TV",
+                url: "https://cdn4.skygo.mn/live/disk1/Babes/HLSv3-FTA/Babes.m3u8",
+                group: "Premium Content"
+            },
+            {
+                name: "Eroxxx HD",
+                url: "https://webtvstream.bhtelecom.ba/eroxxx.m3u8",
+                group: "Premium Content"
+            }
+        ];
+
+        window.addEventListener('DOMContentLoaded', loadChannels);
+
+        function loadChannels() {
+            renderChannels();
+        }
+
+        function renderChannels() {
+            const query = searchInput.value.toLowerCase();
+            channelListEl.innerHTML = "";
+            
+            const filtered = myChannels.filter(ch => ch.name.toLowerCase().includes(query));
+
+            if (filtered.length === 0) {
+                channelListEl.innerHTML = '<div style="padding:20px; color:gray;">No channels found.</div>';
+                return;
+            }
+
+            let currentGroup = "";
+            filtered.forEach(ch => {
+                if (ch.group !== currentGroup) {
+                    const header = document.createElement('div');
+                    header.className = 'category-header';
+                    header.innerText = ch.group;
+                    channelListEl.appendChild(header);
+                    currentGroup = ch.group;
+                }
+
+                const div = document.createElement('div');
+                div.className = 'channel-item' + (ch.url === currentPlayingUrl ? ' active' : '');
+                div.innerHTML = `
+                    <div class="channel-info">
+                        <div class="channel-title">${ch.name} <span class="status-badge">HD</span></div>
+                    </div>
+                `;
+                div.onclick = () => playStream(ch.url, ch.name);
+                channelListEl.appendChild(div);
+            });
+        }
+
+        function playStream(url, name) {
+            currentPlayingUrl = url;
+            nowPlayingText.innerText = `Connecting...`;
+            renderChannels();
+
+            if (hls) {
+                hls.destroy();
+            }
+
+            if (Hls.isSupported()) {
+                hls = new Hls();
+                hls.loadSource(url);
+                hls.attachMedia(video);
+                hls.on(Hls.Events.MANIFEST_PARSED, () => {
+                    video.play();
+                    nowPlayingText.innerText = `▶ ${name}`;
+                });
+                hls.on(Hls.Events.ERROR, (event, data) => {
+                    if (data.fatal) nowPlayingText.innerText = `❌ Error Loading Stream`;
+                });
+            } 
+            else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                video.src = url;
+                video.addEventListener('loadedmetadata', () => {
+                    video.play();
+                    nowPlayingText.innerText = `▶ ${name}`;
+                });
+            }
+        }
+
+        function stopPlayer() {
+            if (hls) {
+                hls.destroy();
+                hls = null;
+            }
+            video.pause();
+            video.src = "";
+            currentPlayingUrl = null;
+            nowPlayingText.innerText = "Not playing";
+            renderChannels();
+        }
+    </script>
+</body>
+</html>
