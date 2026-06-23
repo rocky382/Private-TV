@@ -51,9 +51,10 @@
             width: 100%;
         }
 
-        /* Video Player */
         .player-section { flex: none; height: 35vh; min-height: 220px; background: #000; display: flex; flex-direction: column; width: 100%; }
         .video-container { flex: 1; display: flex; justify-content: center; align-items: center; position: relative; background: #000; }
+        
+        /* Added muted attribute to bypass browser autoplay blocks */
         video { width: 100%; height: 100%; object-fit: contain; }
         
         .player-controls { background: var(--bg-panel); padding: 8px 15px; display: flex; gap: 8px; align-items: center; flex-shrink: 0; border-bottom: 1px solid #333; }
@@ -65,7 +66,6 @@
         
         .now-playing { margin-left: auto; color: var(--accent-green); font-weight: bold; font-size: 0.85rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 45%; text-align: right; }
 
-        /* List Section */
         .list-section { width: 100%; flex: 1; display: flex; flex-direction: column; background: var(--bg-main); overflow: hidden; }
         
         .toolbar { 
@@ -130,10 +130,10 @@
     </header>
 
     <div class="main-content">
-        <!-- VIDEO PLAYER -->
         <div class="player-section">
             <div class="video-container">
-                <video id="videoPlayer" controls playsinline></video>
+                <!-- Muted added to help autoplay work -->
+                <video id="videoPlayer" controls playsinline muted></video>
             </div>
             <div class="player-controls">
                 <button class="btn btn-stop" onclick="stopPlayer()">⏹ STOP</button>
@@ -142,7 +142,6 @@
             </div>
         </div>
 
-        <!-- CHANNEL LIST -->
         <div class="list-section">
             <div class="toolbar">
                 <input type="text" id="searchInput" placeholder="🔍 Search channels..." oninput="renderChannels()">
@@ -159,6 +158,7 @@
         
         let hls = null;
         let currentPlayingUrl = null;
+        let hasInteracted = false;
 
         const myChannels = [
             {
@@ -173,7 +173,7 @@
             }
         ];
 
-        // 2) Play first channel automatically upon first run
+        // Start playing the first channel immediately
         window.addEventListener('DOMContentLoaded', () => {
             renderChannels();
             if (myChannels.length > 0) {
@@ -181,10 +181,16 @@
             }
         });
 
-        // 1) Logic for the Next button to keep cycling
+        // Backup: If autoplay was blocked, start video on the very first tap of the screen
+        document.body.addEventListener('click', () => {
+            if (!hasInteracted && video.paused) {
+                video.play().catch(e => console.log("Play failed"));
+                hasInteracted = true;
+            }
+        }, { once: true });
+
         function playNext() {
             let currentIndex = myChannels.findIndex(ch => ch.url === currentPlayingUrl);
-            // Move to next, if at end, loop back to 0
             let nextIndex = (currentIndex + 1) % myChannels.length;
             const nextChannel = myChannels[nextIndex];
             playStream(nextChannel.url, nextChannel.name);
@@ -193,13 +199,7 @@
         function renderChannels() {
             const query = searchInput.value.toLowerCase();
             channelListEl.innerHTML = "";
-            
             const filtered = myChannels.filter(ch => ch.name.toLowerCase().includes(query));
-
-            if (filtered.length === 0) {
-                channelListEl.innerHTML = '<div style="padding:20px; color:gray;">No channels found.</div>';
-                return;
-            }
 
             let currentGroup = "";
             filtered.forEach(ch => {
@@ -226,7 +226,7 @@
         function playStream(url, name) {
             currentPlayingUrl = url;
             nowPlayingText.innerText = `Connecting...`;
-            renderChannels(); // Update active highlight in list
+            renderChannels();
 
             if (hls) {
                 hls.destroy();
@@ -237,11 +237,14 @@
                 hls.loadSource(url);
                 hls.attachMedia(video);
                 hls.on(Hls.Events.MANIFEST_PARSED, () => {
-                    video.play().catch(e => console.log("Autoplay check:", e));
+                    // Start playback
+                    const playPromise = video.play();
+                    if (playPromise !== undefined) {
+                        playPromise.catch(error => {
+                            nowPlayingText.innerText = `⚠️ Tap screen to play`;
+                        });
+                    }
                     nowPlayingText.innerText = `▶ ${name}`;
-                });
-                hls.on(Hls.Events.ERROR, (event, data) => {
-                    if (data.fatal) nowPlayingText.innerText = `❌ Stream Error`;
                 });
             } 
             else if (video.canPlayType('application/vnd.apple.mpegurl')) {
