@@ -264,9 +264,21 @@
             }
 
             if (Hls.isSupported()) {
-                hls = new Hls();
+                // Configured hls.js with high retry counts and custom buffer thresholds
+                hls = new Hls({
+                    enableWorker: true,
+                    lowLatencyMode: false,
+                    manifestLoadingMaxRetry: 10,
+                    manifestLoadingRetryDelay: 1000,
+                    levelLoadingMaxRetry: 10,
+                    levelLoadingRetryDelay: 1000,
+                    fragLoadingMaxRetry: 15,
+                    fragLoadingRetryDelay: 1000,
+                });
+                
                 hls.loadSource(url);
                 hls.attachMedia(video);
+                
                 hls.on(Hls.Events.MANIFEST_PARSED, () => {
                     const playPromise = video.play();
                     if (playPromise !== undefined) {
@@ -275,6 +287,28 @@
                         });
                     }
                     nowPlayingText.innerText = `▶ ${name}`;
+                });
+
+                // Auto-recovery engine for connection drops & freezes
+                hls.on(Hls.Events.ERROR, (event, data) => {
+                    if (data.fatal) {
+                        switch (data.type) {
+                            case Hls.ErrorTypes.NETWORK_ERROR:
+                                console.log("Network drop detected. Attempting automatic reconnection...");
+                                nowPlayingText.innerText = `🔄 Reconnecting...`;
+                                hls.startLoad();
+                                break;
+                            case Hls.ErrorTypes.MEDIA_ERROR:
+                                console.log("Media stall detected. Recovering playback buffer...");
+                                hls.recoverMediaError();
+                                break;
+                            default:
+                                console.log("Fatal player error. Restarting stream...");
+                                hls.destroy();
+                                playStream(url, name);
+                                break;
+                        }
+                    }
                 });
             } 
             else if (video.canPlayType('application/vnd.apple.mpegurl')) {
