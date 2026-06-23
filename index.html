@@ -3,6 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <!-- This tag stops GitHub from sending its domain name to the stream server, which often bypasses blocks -->
+    <meta name="referrer" content="no-referrer">
     <title>🎬 Private TV Ultimate</title>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <style>
@@ -53,8 +55,6 @@
 
         .player-section { flex: none; height: 35vh; min-height: 220px; background: #000; display: flex; flex-direction: column; width: 100%; }
         .video-container { flex: 1; display: flex; justify-content: center; align-items: center; position: relative; background: #000; }
-        
-        /* Added muted attribute to bypass browser autoplay blocks */
         video { width: 100%; height: 100%; object-fit: contain; }
         
         .player-controls { background: var(--bg-panel); padding: 8px 15px; display: flex; gap: 8px; align-items: center; flex-shrink: 0; border-bottom: 1px solid #333; }
@@ -132,7 +132,6 @@
     <div class="main-content">
         <div class="player-section">
             <div class="video-container">
-                <!-- Muted added to help autoplay work -->
                 <video id="videoPlayer" controls playsinline muted></video>
             </div>
             <div class="player-controls">
@@ -173,7 +172,6 @@
             }
         ];
 
-        // Start playing the first channel immediately
         window.addEventListener('DOMContentLoaded', () => {
             renderChannels();
             if (myChannels.length > 0) {
@@ -181,7 +179,6 @@
             }
         });
 
-        // Backup: If autoplay was blocked, start video on the very first tap of the screen
         document.body.addEventListener('click', () => {
             if (!hasInteracted && video.paused) {
                 video.play().catch(e => console.log("Play failed"));
@@ -237,7 +234,6 @@
                 hls.loadSource(url);
                 hls.attachMedia(video);
                 hls.on(Hls.Events.MANIFEST_PARSED, () => {
-                    // Start playback
                     const playPromise = video.play();
                     if (playPromise !== undefined) {
                         playPromise.catch(error => {
