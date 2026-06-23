@@ -61,7 +61,7 @@
         .btn:active { transform: scale(0.95); }
         
         .btn-stop { background: var(--accent-red); flex-shrink: 0; }
-        .btn-refresh { background: var(--accent-blue); flex-shrink: 0; }
+        .btn-next { background: var(--accent-blue); flex-shrink: 0; }
         
         .now-playing { margin-left: auto; color: var(--accent-green); font-weight: bold; font-size: 0.85rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 45%; text-align: right; }
 
@@ -130,17 +130,19 @@
     </header>
 
     <div class="main-content">
+        <!-- VIDEO PLAYER -->
         <div class="player-section">
             <div class="video-container">
                 <video id="videoPlayer" controls playsinline></video>
             </div>
             <div class="player-controls">
                 <button class="btn btn-stop" onclick="stopPlayer()">⏹ STOP</button>
-                <button class="btn btn-refresh" onclick="loadChannels()">🔄 Reload</button>
+                <button class="btn btn-next" onclick="playNext()">⏭ NEXT</button>
                 <div class="now-playing" id="nowPlayingText">Not playing</div>
             </div>
         </div>
 
+        <!-- CHANNEL LIST -->
         <div class="list-section">
             <div class="toolbar">
                 <input type="text" id="searchInput" placeholder="🔍 Search channels..." oninput="renderChannels()">
@@ -158,7 +160,6 @@
         let hls = null;
         let currentPlayingUrl = null;
 
-        // Your specific channel list
         const myChannels = [
             {
                 name: "Babes TV",
@@ -172,10 +173,21 @@
             }
         ];
 
-        window.addEventListener('DOMContentLoaded', loadChannels);
-
-        function loadChannels() {
+        // 2) Play first channel automatically upon first run
+        window.addEventListener('DOMContentLoaded', () => {
             renderChannels();
+            if (myChannels.length > 0) {
+                playStream(myChannels[0].url, myChannels[0].name);
+            }
+        });
+
+        // 1) Logic for the Next button to keep cycling
+        function playNext() {
+            let currentIndex = myChannels.findIndex(ch => ch.url === currentPlayingUrl);
+            // Move to next, if at end, loop back to 0
+            let nextIndex = (currentIndex + 1) % myChannels.length;
+            const nextChannel = myChannels[nextIndex];
+            playStream(nextChannel.url, nextChannel.name);
         }
 
         function renderChannels() {
@@ -214,7 +226,7 @@
         function playStream(url, name) {
             currentPlayingUrl = url;
             nowPlayingText.innerText = `Connecting...`;
-            renderChannels();
+            renderChannels(); // Update active highlight in list
 
             if (hls) {
                 hls.destroy();
@@ -225,11 +237,11 @@
                 hls.loadSource(url);
                 hls.attachMedia(video);
                 hls.on(Hls.Events.MANIFEST_PARSED, () => {
-                    video.play();
+                    video.play().catch(e => console.log("Autoplay check:", e));
                     nowPlayingText.innerText = `▶ ${name}`;
                 });
                 hls.on(Hls.Events.ERROR, (event, data) => {
-                    if (data.fatal) nowPlayingText.innerText = `❌ Error Loading Stream`;
+                    if (data.fatal) nowPlayingText.innerText = `❌ Stream Error`;
                 });
             } 
             else if (video.canPlayType('application/vnd.apple.mpegurl')) {
