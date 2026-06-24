@@ -56,14 +56,18 @@
         .video-container { flex: 1; display: flex; justify-content: center; align-items: center; position: relative; background: #000; }
         video { width: 100%; height: 100%; object-fit: contain; }
         
-        .player-controls { background: var(--bg-panel); padding: 8px 15px; display: flex; gap: 8px; align-items: center; flex-shrink: 0; border-bottom: 1px solid #333; }
-        .btn { padding: 8px 12px; border: none; border-radius: 4px; font-weight: bold; font-size: 0.85rem; cursor: pointer; color: white; transition: 0.2s; white-space: nowrap; }
+        /* Reduced control gap to save space */
+        .player-controls { background: var(--bg-panel); padding: 8px 12px; display: flex; gap: 6px; align-items: center; flex-shrink: 0; border-bottom: 1px solid #333; }
+        
+        /* Reduced button padding and font-size for tight mobile viewports */
+        .btn { padding: 6px 12px; border: none; border-radius: 4px; font-weight: bold; font-size: 0.8rem; cursor: pointer; color: white; transition: 0.2s; white-space: nowrap; }
         .btn:active { transform: scale(0.95); }
         
         .btn-stop { background: var(--accent-red); flex-shrink: 0; }
         .btn-back, .btn-next { background: var(--accent-blue); flex-shrink: 0; }
         
-        .now-playing { margin-left: auto; color: var(--accent-green); font-weight: bold; font-size: 0.85rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 45%; text-align: right; }
+        /* Expanded max-width so titles have more room to display in portrait mode */
+        .now-playing { margin-left: auto; color: var(--accent-green); font-weight: bold; font-size: 0.8rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 60%; text-align: right; }
 
         .list-section { width: 100%; flex: 1; display: flex; flex-direction: column; background: var(--bg-main); overflow: hidden; }
 
@@ -104,14 +108,14 @@
                 <video id="videoPlayer" controls playsinline muted></video>
             </div>
             <div class="player-controls">
-                <button class="btn btn-stop" onclick="stopPlayer()">⏹ STOP</button>
-                <button class="btn btn-back" onclick="playPrev()">⏮ BACK</button>
-                <button class="btn btn-next" onclick="playNext()">⏭ NEXT</button>
+                <button class="btn btn-stop" onclick="stopPlayer()">⏹</button>
+                <button class="btn btn-back" onclick="playPrev()">⏮</button>
+                <button class="btn btn-next" onclick="playNext()">⏭</button>
                 <div class="now-playing" id="nowPlayingText">Not playing</div>
             </div>
         </div>
 
-        <!-- CHANNEL LIST (No Search Bar) -->
+        <!-- CHANNEL LIST -->
         <div class="list-section">
             <div class="channel-list" id="channelList"></div>
         </div>
@@ -126,7 +130,6 @@
         let currentPlayingUrl = null;
         let hasInteracted = false;
 
-        // Cleaned up dataset (Removed group property)
         const myChannels = [
             {
                 name: "Babes TV",
@@ -180,7 +183,6 @@
             }
         }, { once: true });
 
-        // Cycles backward through the array
         function playPrev() {
             let currentIndex = myChannels.findIndex(ch => ch.url === currentPlayingUrl);
             let prevIndex = (currentIndex - 1 + myChannels.length) % myChannels.length;
@@ -188,7 +190,6 @@
             playStream(prevChannel.url, prevChannel.name);
         }
 
-        // Cycles forward through the array
         function playNext() {
             let currentIndex = myChannels.findIndex(ch => ch.url === currentPlayingUrl);
             let nextIndex = (currentIndex + 1) % myChannels.length;
@@ -196,7 +197,6 @@
             playStream(nextChannel.url, nextChannel.name);
         }
 
-        // Renders simple flat list of channels with no headers
         function renderChannels() {
             channelListEl.innerHTML = "";
             myChannels.forEach(ch => {
