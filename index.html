@@ -58,7 +58,6 @@
         
         .player-controls { background: var(--bg-panel); padding: 8px 12px; display: flex; gap: 6px; align-items: center; flex-shrink: 0; border-bottom: 1px solid #333; }
         
-        /* Adjusted padding to fit text labels compactly */
         .btn { padding: 6px 10px; border: none; border-radius: 4px; font-weight: bold; font-size: 0.8rem; cursor: pointer; color: white; transition: 0.2s; white-space: nowrap; }
         .btn:active { transform: scale(0.95); }
         
@@ -195,6 +194,25 @@
             playStream(nextChannel.url, nextChannel.name);
         }
 
+        // Registers hardware buttons and browser-native player overlays
+        function updateMediaSession(name) {
+            if ('mediaSession' in navigator) {
+                navigator.mediaSession.metadata = new MediaMetadata({
+                    title: name,
+                    artist: 'Private TV Ultimate',
+                    album: 'Live Stream',
+                    artwork: [
+                        { src: 'https://cdn-icons-png.flaticon.com/512/716/716017.png', sizes: '512x512', type: 'image/png' }
+                    ]
+                });
+
+                // Link native Next and Back controls to our functions
+                navigator.mediaSession.setActionHandler('previoustrack', playPrev);
+                navigator.mediaSession.setActionHandler('nexttrack', playNext);
+                navigator.mediaSession.setActionHandler('stop', stopPlayer);
+            }
+        }
+
         function renderChannels() {
             channelListEl.innerHTML = "";
             myChannels.forEach(ch => {
@@ -214,6 +232,7 @@
             currentPlayingUrl = url;
             nowPlayingText.innerText = `Connecting...`;
             renderChannels();
+            updateMediaSession(name); // Load system controls for this track
 
             if (hls) {
                 hls.destroy();
