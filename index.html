@@ -56,16 +56,16 @@
         .video-container { flex: 1; display: flex; justify-content: center; align-items: center; position: relative; background: #000; }
         video { width: 100%; height: 100%; object-fit: contain; }
         
-        .player-controls { background: var(--bg-panel); padding: 8px 12px; display: flex; gap: 6px; align-items: center; flex-shrink: 0; border-bottom: 1px solid #333; }
+        .player-controls { background: var(--bg-panel); padding: 8px 12px; display: flex; gap: 5px; align-items: center; flex-shrink: 0; border-bottom: 1px solid #333; }
         
-        /* Adjusted padding to fit text labels compactly */
-        .btn { padding: 6px 10px; border: none; border-radius: 4px; font-weight: bold; font-size: 0.8rem; cursor: pointer; color: white; transition: 0.2s; white-space: nowrap; }
+        .btn { padding: 6px 8px; border: none; border-radius: 4px; font-weight: bold; font-size: 0.75rem; cursor: pointer; color: white; transition: 0.2s; white-space: nowrap; }
         .btn:active { transform: scale(0.95); }
         
         .btn-stop { background: var(--accent-red); flex-shrink: 0; }
         .btn-back, .btn-next { background: var(--accent-blue); flex-shrink: 0; }
+        .btn-capture { background: var(--accent-yellow); color: #000; flex-shrink: 0; }
         
-        .now-playing { margin-left: auto; color: var(--accent-green); font-weight: bold; font-size: 0.8rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 50%; text-align: right; }
+        .now-playing { margin-left: auto; color: var(--accent-green); font-weight: bold; font-size: 0.75rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 35%; text-align: right; }
 
         .list-section { width: 100%; flex: 1; display: flex; flex-direction: column; background: var(--bg-main); overflow: hidden; }
 
@@ -109,6 +109,7 @@
                 <button class="btn btn-stop" onclick="stopPlayer()">⏹</button>
                 <button class="btn btn-back" onclick="playPrev()">⏮ Back</button>
                 <button class="btn btn-next" onclick="playNext()">⏭ Next</button>
+                <button class="btn btn-capture" onclick="captureFrame()">📷 Shot</button>
                 <div class="now-playing" id="nowPlayingText">Not playing</div>
             </div>
         </div>
@@ -193,6 +194,33 @@
             let nextIndex = (currentIndex + 1) % myChannels.length;
             const nextChannel = myChannels[nextIndex];
             playStream(nextChannel.url, nextChannel.name);
+        }
+
+        function captureFrame() {
+            // Using 'yandex_tab' instead of '_blank' targets the same open tab
+            window.open('https://yandex.com/images/', 'yandex_tab');
+
+            try {
+                const canvas = document.createElement('canvas');
+                canvas.width = video.videoWidth || 640;
+                canvas.height = video.videoHeight || 360;
+                const ctx = canvas.getContext('2d');
+                
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                
+                const dataUrl = canvas.toDataURL('image/png');
+                
+                const link = document.createElement('a');
+                link.download = 'screenshot.png';
+                link.href = dataUrl;
+                document.body.appendChild(link); // Temporarily append to DOM to ensure click works across all browsers
+                link.click();
+                document.body.removeChild(link); // Instantly clean up
+            } 
+            catch (error) {
+                console.log("CORS block prevented screenshot export:", error);
+                alert("⚠️ Stream security blocks automatic screenshots on this channel.\n\nPlease take a screenshot manually using your phone/PC, and upload it into the Yandex Images page that just opened.");
+            }
         }
 
         function renderChannels() {
